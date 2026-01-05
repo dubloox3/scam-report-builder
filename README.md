@@ -1,3 +1,35 @@
+# Scam Report Builder
+
+## 📸 Application Screenshots
+
+### 1. Initial Setup - Report Folder
+![Report Folder Setup](01-report-folder-setup.jpg)
+*First run: Choose where to save your scam reports*
+
+### 2. Template Selection
+![Template Selection](02-template-selection.jpg)  
+*Select the type of scam report to create*
+
+### 3. Main Information Tab
+![Main Info Tab](03-main-info-tab.jpg)
+*Enter scammer details: aliases, emails, websites, timeline*
+
+### 4. Payment Information Tab
+![Payment Info Tab](04-payment-info-tab.jpg)
+*Add payment amounts, bank accounts, and other financial details*
+
+### 5. Evidence Tab
+![Evidence Tab](05-evidence-tab.jpg)
+*Upload screenshots, photos, passports, and other evidence*
+
+### 6. Remarks Tab
+![Remarks Tab](06-remarks-tab.jpg)
+*Add additional notes and observations*
+
+### 7. Generated Report Example
+![Example Report](07-example-report.jpg)
+*Final ODT report with embedded images and organized sections*
+
 Scam Report Builder - Quick Start Guide
 What Is It?
 -A desktop app to create organized scam reports with evidence. Fill in what you know, add screenshots, get a professional document ready to share with authorities.
@@ -31,4 +63,5 @@ Report Contains
 Tips
 -Save reports to a dedicated folder (numbering logic will count upwards)
 -Use clear filenames for images
+
 -talk to your reporting contact what info they need (and adjust the format)
