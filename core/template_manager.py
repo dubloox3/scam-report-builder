@@ -98,7 +98,7 @@ class TemplateManager:
                 },
                 "scammer_names": {
                     "type": "list",
-                    "label": "Scammer's Real Name",
+                    "label": "Scammers real name:",
                     "button": "+ Add name"
                 },
                 "passport_ids": {

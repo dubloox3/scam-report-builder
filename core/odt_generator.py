@@ -148,7 +148,7 @@ class ODTGenerator:
         """Create content.xml with report data and image references"""
         content_path = temp_path / 'content.xml'
         
-        # Start XML document with Liberation Serif font
+        # Start XML document with Times New Roman font
         xml = '''<?xml version="1.0" encoding="UTF-8"?>
 <office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"
   xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0"
@@ -163,7 +163,7 @@ class ODTGenerator:
   
   <office:scripts/>
   <office:font-face-decls>
-    <style:font-face style:name="Liberation Serif" svg:font-family="&apos;Liberation Serif&apos;" style:font-family-generic="roman" style:font-pitch="variable"/>
+    <style:font-face style:name="Times New Roman" svg:font-family="&apos;Times New Roman&apos;" style:font-family-generic="roman" style:font-pitch="variable"/>
   </office:font-face-decls>
   
   <office:automatic-styles>'''
@@ -175,35 +175,31 @@ class ODTGenerator:
       <style:graphic-properties style:horizontal-pos="center" style:horizontal-rel="paragraph"/>
     </style:style>'''
         
-        # Add text styles for formatting
+        # Add text styles for formatting - CHANGED to Times New Roman
         xml += '''
     <style:style style:name="T1" style:family="text">
-      <style:text-properties fo:font-size="12pt" fo:font-family="Liberation Serif" style:font-name="Liberation Serif"/>
+      <style:text-properties fo:font-size="12pt" fo:font-family="&apos;Times New Roman&apos;" style:font-name="Times New Roman"/>
     </style:style>
     <style:style style:name="T1BoldUnderline" style:family="text">
-      <style:text-properties fo:font-size="12pt" fo:font-family="Liberation Serif" style:font-name="Liberation Serif" fo:font-weight="bold" style:text-underline-style="solid" style:text-underline-width="auto" style:text-underline-color="font-color"/>
+      <style:text-properties fo:font-size="12pt" fo:font-family="&apos;Times New Roman&apos;" style:font-name="Times New Roman" fo:font-weight="bold" style:text-underline-style="solid" style:text-underline-width="auto" style:text-underline-color="font-color"/>
     </style:style>
     <style:style style:name="T1Underline" style:family="text">
-      <style:text-properties fo:font-size="12pt" fo:font-family="Liberation Serif" style:font-name="Liberation Serif" style:text-underline-style="solid" style:text-underline-width="auto" style:text-underline-color="font-color"/>
+      <style:text-properties fo:font-size="12pt" fo:font-family="&apos;Times New Roman&apos;" style:font-name="Times New Roman" style:text-underline-style="solid" style:text-underline-width="auto" style:text-underline-color="font-color"/>
     </style:style>
     <style:style style:name="T1Bold" style:family="text">
-      <style:text-properties fo:font-size="12pt" fo:font-family="Liberation Serif" style:font-name="Liberation Serif" fo:font-weight="bold"/>
+      <style:text-properties fo:font-size="12pt" fo:font-family="&apos;Times New Roman&apos;" style:font-name="Times New Roman" fo:font-weight="bold"/>
     </style:style>
     <style:style style:name="P1" style:family="paragraph">
-      <style:paragraph-properties fo:margin-top="0in" fo:margin-bottom="0.1in"/>
-      <style:text-properties fo:font-size="12pt" fo:font-family="Liberation Serif" style:font-name="Liberation Serif"/>
+      <style:paragraph-properties fo:margin-top="0in" fo:margin-bottom="0in" fo:line-height="100%"/>
+      <style:text-properties fo:font-size="12pt" fo:font-family="&apos;Times New Roman&apos;" style:font-name="Times New Roman"/>
     </style:style>
     <style:style style:name="P1BoldUnderline" style:family="paragraph">
-      <style:paragraph-properties fo:margin-top="0in" fo:margin-bottom="0.1in"/>
-      <style:text-properties fo:font-size="12pt" fo:font-family="Liberation Serif" style:font-name="Liberation Serif" fo:font-weight="bold" style:text-underline-style="solid" style:text-underline-width="auto" style:text-underline-color="font-color"/>
-    </style:style>
-    <style:style style:name="ListBullet" style:family="paragraph">
-      <style:paragraph-properties fo:margin-top="0in" fo:margin-bottom="0in" fo:margin-left="0.2in" fo:text-indent="0in" style:auto-text-indent="false"/>
-      <style:text-properties fo:font-size="12pt" fo:font-family="Liberation Serif" style:font-name="Liberation Serif"/>
+      <style:paragraph-properties fo:margin-top="0in" fo:margin-bottom="0in" fo:line-height="100%"/>
+      <style:text-properties fo:font-size="12pt" fo:font-family="&apos;Times New Roman&apos;" style:font-name="Times New Roman" fo:font-weight="bold" style:text-underline-style="solid" style:text-underline-width="auto" style:text-underline-color="font-color"/>
     </style:style>
     <style:style style:name="PageBreak" style:family="paragraph">
       <style:paragraph-properties fo:break-before="page"/>
-      <style:text-properties fo:font-size="12pt" fo:font-family="Liberation Serif" style:font-name="Liberation Serif"/>
+      <style:text-properties fo:font-size="12pt" fo:font-family="&apos;Times New Roman&apos;" style:font-name="Times New Roman"/>
     </style:style>
   </office:automatic-styles>
   
@@ -221,8 +217,7 @@ class ODTGenerator:
         
         xml += f'''
       <text:p text:style-name="P1BoldUnderline">Report for {scam_type} scammer "{ODTGenerator._get_main_alias(content)}"</text:p>
-      <text:p text:style-name="P1">Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</text:p>
-      <text:p text:style-name="P1"/>'''
+      <text:p text:style-name="P1">Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</text:p>'''
         
         # Add report sections
         xml = ODTGenerator._add_report_sections(xml, content)
@@ -334,7 +329,7 @@ class ODTGenerator:
         bank_accounts = content.get('bank_info', [])
         if bank_accounts:
             xml += '''
-      <text:p text:style-name="P1BoldUnderline">BANK ACCOUNTS</text:p>'''
+      <text:p text:style-name="P1BoldUnderline">Bank account(s):</text:p>'''
             
             if isinstance(bank_accounts, str):
                 xml += '''
@@ -344,6 +339,7 @@ class ODTGenerator:
                     if line.strip():
                         xml += f'''
       <text:p text:style-name="P1">{line.strip()}</text:p>'''
+                # FIXED: Add linebreak after bank account details
                 xml += '''
       <text:p text:style-name="P1"/>'''
                 
@@ -362,16 +358,19 @@ class ODTGenerator:
                         xml += f'''
       <text:p text:style-name="P1">{bank_account}</text:p>'''
                     
-                    xml += '''
+                    # FIXED: Add linebreak after each bank account (except the last one)
+                    if i < len(bank_accounts):
+                        xml += '''
       <text:p text:style-name="P1"/>'''
-            
-            xml += '''
+                
+                # FIXED: Add linebreak after all bank accounts
+                xml += '''
       <text:p text:style-name="P1"/>'''
         
-        # Other Payment Methods
+        # Other Payment Methods - FIXED: Changed to T1BoldUnderline (bold + underline)
         if content.get('other_payments'):
             xml += '''
-      <text:p text:style-name="P1"><text:span text:style-name="T1Underline">Other payment methods:</text:span></text:p>'''
+      <text:p text:style-name="P1"><text:span text:style-name="T1BoldUnderline">Other payment methods:</text:span></text:p>'''
             
             if isinstance(content['other_payments'], list):
                 for payment in content['other_payments']:
@@ -379,8 +378,9 @@ class ODTGenerator:
                         payment_type = payment.get('type', 'Unknown')
                         payment_details = payment.get('details', 'N/A')
                         
+                        # FIXED: Use T1Underline for payment type (not bold)
                         xml += f'''
-      <text:p text:style-name="ListBullet">- <text:span text:style-name="T1Underline">{payment_type}:</text:span></text:p>'''
+      <text:p text:style-name="P1"><text:span text:style-name="T1Underline">{payment_type}:</text:span></text:p>'''
                         
                         if '\n' in payment_details:
                             lines = payment_details.split('\n')
@@ -394,16 +394,15 @@ class ODTGenerator:
                     else:
                         payment_str = str(payment)
                         xml += f'''
-      <text:p text:style-name="ListBullet">- {payment_str}</text:p>'''
+      <text:p text:style-name="P1">{payment_str}</text:p>'''
             
             xml += '''
       <text:p text:style-name="P1"/>'''
         
-        # Fee/Amount section - CHANGED from "Amount:" to "Fee/Amount:"
+        # Fee/Amount section
         if content.get('amount'):
             xml += f'''
       <text:p text:style-name="P1"><text:span text:style-name="T1Underline">Fee/Amount:</text:span> {content["amount"]}</text:p>
-      <text:p text:style-name="P1"/>
       <text:p text:style-name="P1"/>'''
         
         # Remarks section
@@ -413,10 +412,10 @@ class ODTGenerator:
             if isinstance(content['remarks'], list):
                 for remark in content['remarks']:
                     xml += f'''
-      <text:p text:style-name="ListBullet">- {remark}</text:p>'''
+      <text:p text:style-name="P1">{remark}</text:p>'''
             else:
                 xml += f'''
-      <text:p text:style-name="ListBullet">- {content["remarks"]}</text:p>'''
+      <text:p text:style-name="P1">{content["remarks"]}</text:p>'''
             xml += '''
       <text:p text:style-name="P1"/>'''
         
@@ -444,24 +443,28 @@ class ODTGenerator:
         xml += '''
       <text:p text:style-name="P1"><text:span text:style-name="T1Underline">Evidence:</text:span></text:p>'''
         
-        # Scammer's real name - FIXED: Only show if a name was actually entered
-        real_name = None
+        # Process scammer names - collect ALL valid names
+        valid_names = []
         
-        # First priority: scammer_names list (first entry)
+        # First: Collect names from scammer_names list
         if has_scammer_names:
-            real_name = scammer_names[0]
-            # Check if the name is not empty and not placeholder text
-            if real_name and real_name.strip() and real_name.strip() != "(to be collected)":
-                xml += f'''
-      <text:p text:style-name="P1"><text:span text:style-name="T1Underline">Scammers real name:</text:span> {real_name}</text:p>'''
+            for name in scammer_names:
+                if name and name.strip() and name.strip() != "(to be collected)":
+                    valid_names.append(name.strip())
         
-        # Second priority: legacy scammer_real_name field
-        elif has_scammer_real_name:
-            real_name = content.get('scammer_real_name')
-            # Check if the name is not empty and not placeholder text
-            if real_name and real_name.strip() and real_name.strip() != "(to be collected)":
-                xml += f'''
-      <text:p text:style-name="P1"><text:span text:style-name="T1Underline">Scammers real name:</text:span> {real_name}</text:p>'''
+        # Second: Add legacy scammer_real_name if it exists and is valid
+        if has_scammer_real_name:
+            legacy_name = content.get('scammer_real_name')
+            if (legacy_name and legacy_name.strip() and 
+                legacy_name.strip() != "(to be collected)" and
+                legacy_name.strip() not in valid_names):  # Avoid duplicates
+                valid_names.append(legacy_name.strip())
+        
+        # Display all collected names, comma-separated
+        if valid_names:
+            names_display = ", ".join(valid_names)
+            xml += f'''
+      <text:p text:style-name="P1"><text:span text:style-name="T1Underline">Scammers real name:</text:span> {names_display}</text:p>'''
         
         # Add images if any
         if has_images:
@@ -529,7 +532,8 @@ class ODTGenerator:
   
   <office:styles>
     <style:style style:name="Standard" style:family="paragraph">
-      <style:text-properties fo:font-size="12pt" fo:font-family="Liberation Serif"/>
+      <style:paragraph-properties fo:margin-top="0in" fo:margin-bottom="0in" fo:line-height="100%"/>
+      <style:text-properties fo:font-size="12pt" fo:font-family="&apos;Times New Roman&apos;" style:font-name="Times New Roman"/>
     </style:style>
     <style:style style:name="Graphics" style:family="graphic">
       <style:graphic-properties text:anchor-type="paragraph" 

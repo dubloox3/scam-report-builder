@@ -199,14 +199,25 @@ class ScamReportBuilder(QMainWindow):
     def _create_field_widget(self, key: str, field_def: Dict[str, Any], layout: QVBoxLayout):
         """Create widget for a field based on its type"""
         field_type = field_def['type']
-        label = field_def['label']
         
         if field_type == 'text':
+            # Handle custom labels for specific fields
+            if key == 'scammer_names':
+                label = "Scammers real name:"
+            else:
+                label = field_def['label']
+            
             field_layout = QHBoxLayout()
-            field_layout.addWidget(QLabel(f"{label}:"))
+            field_layout.addWidget(QLabel(label))
             
             widget = QLineEdit()
-            widget.setText(field_def.get('default', ''))
+            
+            # Handle custom placeholder for other_payments
+            if key == 'other_payments':
+                widget.setPlaceholderText("Enter other payment details here...")
+            else:
+                widget.setText(field_def.get('default', ''))
+            
             setattr(self, f"{key}_field", widget)
             
             field_layout.addWidget(widget)
@@ -221,7 +232,7 @@ class ScamReportBuilder(QMainWindow):
             
         elif field_type == 'date':
             field_layout = QHBoxLayout()
-            field_layout.addWidget(QLabel(f"{label}:"))
+            field_layout.addWidget(QLabel(f"{field_def['label']}:"))
             
             widget = QDateEdit()
             widget.setCalendarPopup(True)
@@ -234,7 +245,7 @@ class ScamReportBuilder(QMainWindow):
             layout.addLayout(field_layout)
             
         elif field_type == 'multiline':
-            layout.addWidget(QLabel(f"{label}:"))
+            layout.addWidget(QLabel(f"{field_def['label']}:"))
             
             widget = QTextEdit()
             widget.setPlaceholderText(field_def.get('placeholder', ''))
@@ -247,19 +258,35 @@ class ScamReportBuilder(QMainWindow):
             # Get default values from template if they exist
             default_values = field_def.get('default', [])
             
+            # Apply specific label, button text, and placeholder changes for 'alias' field
+            if key == 'alias':
+                label = "Scammers main alias"
+                button_text = "+Add other scammer aliases"
+                # Add tooltip and update placeholder for first entry
+                if default_values:
+                    default_values[0] = default_values[0] if default_values[0] != "Enter value..." else "Enter scammers main alias..."
+            else:
+                label = field_def['label']
+                button_text = field_def.get('button', '+ Add')
+            
             widget = DynamicListWidget(
                 label=label,
-                button_text=field_def.get('button', '+ Add'),
+                button_text=button_text,
                 required=field_def.get('required', False),
                 default_values=default_values
             )
+            
+            # Add tooltip to the alias widget
+            if key == 'alias':
+                widget.setToolTip("This name will be used for the report filename")
+            
             setattr(self, f"{key}_widget", widget)
             layout.addWidget(widget)
             
         elif field_type == 'image_list' or field_type == 'images':
             # Handle both 'image_list' (old) and 'images' (new) types
             widget = ImageListWidget(
-                label=label,
+                label=field_def['label'],
                 button_text=field_def.get('button', '+ Add')
             )
             setattr(self, f"{key}_widget", widget)
@@ -310,48 +337,119 @@ class ScamReportBuilder(QMainWindow):
         group_layout = QVBoxLayout(group_box)
         
         bank_accounts_widget = QWidget()
-        bank_accounts_layout = QVBoxLayout(bank_accounts_widget)
-        bank_accounts_layout.setSpacing(10)
+        self.bank_accounts_layout = QVBoxLayout(bank_accounts_widget)
+        self.bank_accounts_layout.setSpacing(10)
         
         self.bank_account_fields = []
         
-        self._add_bank_account_field(bank_accounts_layout)
+        self._add_bank_account_field(self.bank_accounts_layout)
         
         group_layout.addWidget(bank_accounts_widget)
         
         add_button = QPushButton("+ Add Bank Account")
         add_button.setMaximumWidth(200)
-        add_button.clicked.connect(lambda: self._add_bank_account_field(bank_accounts_layout))
+        add_button.clicked.connect(lambda: self._add_bank_account_field(self.bank_accounts_layout))
         group_layout.addWidget(add_button, alignment=Qt.AlignLeft)
         
         layout.addWidget(group_box)
     
     def _add_bank_account_field(self, layout: QVBoxLayout):
-        """Add a new bank account field to the layout"""
+        """Add a new bank account field to the layout with remove button"""
         account_container = QWidget()
         account_layout = QVBoxLayout(account_container)
         account_layout.setContentsMargins(0, 0, 0, 0)
         
+        # Create horizontal layout for label and remove button
+        header_layout = QHBoxLayout()
+        header_layout.setContentsMargins(0, 0, 0, 5)
+        
         account_num = len(self.bank_account_fields) + 1
         account_label = QLabel(f"Bank Account #{account_num}:")
         account_label.setStyleSheet("font-weight: bold;")
-        account_layout.addWidget(account_label)
+        header_layout.addWidget(account_label)
         
+        header_layout.addStretch()
+        
+        # Add remove button (only show if there's more than one account)
+        remove_button = QPushButton("✕")
+        remove_button.setMaximumWidth(30)
+        remove_button.setMaximumHeight(25)
+        remove_button.setStyleSheet("""
+            QPushButton {
+                background-color: #ff4444;
+                color: white;
+                font-weight: bold;
+                border-radius: 3px;
+                padding: 2px;
+            }
+            QPushButton:hover {
+                background-color: #ff6666;
+            }
+        """)
+        remove_button.clicked.connect(lambda: self._remove_bank_account_field(account_container))
+        header_layout.addWidget(remove_button)
+        
+        account_layout.addLayout(header_layout)
+        
+        # Create multiline text edit for bank info (5 lines high)
         bank_info_edit = QTextEdit()
         bank_info_edit.setPlaceholderText("Enter bank account details (bank name, account number, SWIFT/BIC, etc.)")
-        bank_info_edit.setMaximumHeight(100)
+        bank_info_edit.setMaximumHeight(100)  # Approximately 5 lines
         bank_info_edit.setAcceptRichText(False)
         
         account_layout.addWidget(bank_info_edit)
         
-        self.bank_account_fields.append(bank_info_edit)
+        # Store reference to the field
+        self.bank_account_fields.append((account_container, bank_info_edit))
         
+        # Add to the parent layout
         layout.addWidget(account_container)
+        
+        # Update remove button visibility
+        self._update_remove_button_visibility()
+    
+    def _remove_bank_account_field(self, account_container):
+        """Remove a bank account field from the layout"""
+        # Find and remove the account container from our list
+        for i, (container, edit) in enumerate(self.bank_account_fields):
+            if container == account_container:
+                # Remove from layout
+                self.bank_accounts_layout.removeWidget(container)
+                # Remove from our list
+                self.bank_account_fields.pop(i)
+                # Delete the widget
+                container.deleteLater()
+                break
+        
+        # Renumber remaining accounts
+        self._renumber_bank_accounts()
+        # Update remove button visibility
+        self._update_remove_button_visibility()
+    
+    def _renumber_bank_accounts(self):
+        """Update the labels for all bank accounts"""
+        for i, (container, edit) in enumerate(self.bank_account_fields):
+            # Find the label in the container
+            header_layout = container.layout().itemAt(0).layout()
+            if header_layout:
+                label_widget = header_layout.itemAt(0).widget()
+                if isinstance(label_widget, QLabel):
+                    label_widget.setText(f"Bank Account #{i + 1}:")
+    
+    def _update_remove_button_visibility(self):
+        """Show/hide remove buttons based on number of accounts"""
+        # Show remove button only if there's more than one account
+        for container, edit in self.bank_account_fields:
+            header_layout = container.layout().itemAt(0).layout()
+            if header_layout:
+                remove_button = header_layout.itemAt(2).widget()
+                if isinstance(remove_button, QPushButton):
+                    remove_button.setVisible(len(self.bank_account_fields) > 1)
     
     def _get_bank_accounts_data(self):
         """Get all bank account data as a list of strings"""
         accounts = []
-        for field in self.bank_account_fields:
+        for container, field in self.bank_account_fields:
             text = field.toPlainText().strip()
             if text:
                 accounts.append(text)
@@ -511,22 +609,6 @@ class ScamReportBuilder(QMainWindow):
         
         return data, images
     
-    def _get_filename(self, main_alias: str) -> str:
-        """Generate filename for the report"""
-        if not self.report_number or not self.report_format:
-            return f"scam_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.odt"
-        
-        try:
-            formatted_number = self.report_format.format(number=self.report_number)
-        except:
-            formatted_number = str(self.report_number)
-        
-        clean_alias = re.sub(r'[^\w\s-]', '', main_alias)
-        clean_alias = re.sub(r'[-\s]+', '_', clean_alias)
-        clean_alias = clean_alias[:50] or "unknown"
-        
-        return f"{formatted_number}_Scammer_report_{clean_alias}.odt"
-    
     def _export_report(self):
         """Export report to ODT file"""
         if not self._validate_form():
@@ -537,6 +619,7 @@ class ScamReportBuilder(QMainWindow):
         
         report_data, images = self._collect_data()
         
+        # Generate formatted report number for the data
         if self.report_number and self.report_format:
             try:
                 formatted_number = self.report_format.format(number=self.report_number)
@@ -544,27 +627,58 @@ class ScamReportBuilder(QMainWindow):
                 formatted_number = str(self.report_number)
             report_data['report_number'] = formatted_number
         
-        main_alias = ""
+        # Get scammer name for filename
+        scammer_name = ""
         if report_data.get('alias'):
-            main_alias = report_data['alias'][0]
+            scammer_name = report_data['alias'][0]
         
-        filename = self._get_filename(main_alias)
+        # Generate filename using the new config_manager method
         config_manager = ConfigManager()
-        config = config_manager.load_config()
-        default_dir = config.get("output_directory", "")
+        filename = config_manager.generate_report_filename_from_full_name(
+            report_number=self.report_number,
+            full_name=scammer_name,
+            file_extension="odt"
+        )
         
+        # Check if filename generation succeeded
+        if not filename:
+            # Fallback to old filename format
+            clean_alias = re.sub(r'[^\w\s-]', '', scammer_name)
+            clean_alias = re.sub(r'[-\s]+', '_', clean_alias)
+            clean_alias = clean_alias[:50] or "unknown"
+            filename = f"{self.report_number}_Scammer_report_{clean_alias}.odt"
+        
+        # Get initial folder for file dialog using the new method
+        initial_folder = config_manager.get_initial_folder_for_dialog()
+        
+        # Prepare the initial path for the file dialog
+        if initial_folder and filename:
+            # Ensure initial_folder is a string
+            initial_folder_str = str(initial_folder)
+            initial_path = str(Path(initial_folder_str) / filename)
+        elif filename:
+            initial_path = filename
+        else:
+            # Fallback if no filename could be generated
+            initial_path = f"scam_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.odt"
+        
+        # Use the generated filename in the file dialog
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "Save Report",
-            str(Path(default_dir) / filename) if default_dir else filename,
+            self, 
+            "Save Report",
+            initial_path,
             "ODT Files (*.odt)"
         )
         
         if file_path:
             try:
-                config["output_directory"] = str(Path(file_path).parent)
-                config_manager.save_config(config)
+                # Update the last used folder in config using the new method
+                config_manager.update_folder_from_dialog(file_path)
+                
+                # Update report number in config
                 config_manager.update_report_number(self.report_number, self.report_format)
                 
+                # Generate the ODT file
                 from core.odt_generator import ODTGenerator
                 
                 success = ODTGenerator.create_odt(

@@ -13,6 +13,7 @@ class DynamicListWidget(QWidget):
     def __init__(self, label: str = "", field_type: str = "list", parent=None, default_values=None, button_text: str = "+ Add", required: bool = False):
         super().__init__(parent)
         self.required = required
+        self.field_type = field_type
         self.widgets = []
         self.default_values = default_values if default_values is not None else []
         self.setup_ui(label, button_text)

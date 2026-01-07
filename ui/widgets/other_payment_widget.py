@@ -102,7 +102,7 @@ class OtherPaymentWidget(QWidget):
         details = QTextEdit()
         details.setMaximumHeight(100)
         details.setPlaceholderText(
-            "Enter fee/amount details here...\n"
+            "Enter other payment details here...\n"
             "For Crypto: include wallet addresses, transaction IDs, amount\n"
             "For Money Transfer: include control numbers, sender/receiver info, fees\n"
             "For PayPal: include email addresses, transaction IDs, amount paid"
