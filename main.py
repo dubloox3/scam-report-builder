@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 
 from PySide6.QtWidgets import QApplication, QMessageBox, QFileDialog
+from PySide6.QtCore import Qt  # ADD THIS IMPORT
 
 from ui.dialogs.template_selection_dialog import TemplateSelectionDialog
 from ui.main_window import ScamReportBuilder
@@ -15,12 +16,23 @@ from core.config_manager import ConfigManager
 def prompt_report_folder() -> Path:
     """Prompt user for report folder location on first run"""
     config = ConfigManager()
-    script_dir = Path(__file__).parent
     
     # Check if folder already configured
     saved_folder = config.get_report_folder()
     if saved_folder and Path(saved_folder).exists():
         return Path(saved_folder)
+    
+    # Determine script directory - handle EXE mode
+    if getattr(sys, 'frozen', False):
+        # Running as EXE/pyinstaller bundle
+        # sys._MEIPASS contains the bundle directory
+        if hasattr(sys, '_MEIPASS'):
+            script_dir = Path(sys._MEIPASS)
+        else:
+            script_dir = Path(sys.executable).parent
+    else:
+        # Running as normal Python script
+        script_dir = Path(__file__).parent
     
     # Ask user for folder choice
     msg = QMessageBox()
@@ -64,17 +76,30 @@ def prompt_report_folder() -> Path:
 
 def main():
     """Main application entry point"""
+    # Set up high DPI scaling for better display on high-res screens
+    if hasattr(Qt, 'AA_EnableHighDpiScaling'):
+        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
+        QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+    
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
     
+    # Set application metadata
+    app.setApplicationName("Scam Report Builder")
+    app.setOrganizationName("ScamBaitingTools")
+    
     # Setup report folder on first run
-    reports_folder = prompt_report_folder()
-    if not reports_folder.exists():
+    try:
+        reports_folder = prompt_report_folder()
+        if not reports_folder.exists():
+            reports_folder.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
         QMessageBox.critical(
             None,
             "Folder Error",
-            f"Reports folder not found: {reports_folder}\n"
-            "Please check permissions and try again."
+            f"Could not setup reports folder: {str(e)}\n"
+            "Application will exit."
         )
         sys.exit(1)
     
