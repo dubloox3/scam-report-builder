@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 
 from PySide6.QtWidgets import QApplication, QMessageBox, QFileDialog
-from PySide6.QtCore import Qt  # ADD THIS IMPORT
+from PySide6.QtCore import Qt
 
 from ui.dialogs.template_selection_dialog import TemplateSelectionDialog
 from ui.main_window import ScamReportBuilder
@@ -17,21 +17,20 @@ def prompt_report_folder() -> Path:
     """Prompt user for report folder location on first run"""
     config = ConfigManager()
     
-    # Check if folder already configured
+    # Check if folder already configured and verify sync
     saved_folder = config.get_report_folder()
     if saved_folder and Path(saved_folder).exists():
+        # Verify sync between report_folder and last_used_folder
+        config.verify_report_folder_sync(saved_folder)
         return Path(saved_folder)
     
     # Determine script directory - handle EXE mode
     if getattr(sys, 'frozen', False):
-        # Running as EXE/pyinstaller bundle
-        # sys._MEIPASS contains the bundle directory
         if hasattr(sys, '_MEIPASS'):
             script_dir = Path(sys._MEIPASS)
         else:
             script_dir = Path(sys.executable).parent
     else:
-        # Running as normal Python script
         script_dir = Path(__file__).parent
     
     # Ask user for folder choice
@@ -46,7 +45,7 @@ def prompt_report_folder() -> Path:
     # Create buttons and get references
     existing_btn = msg.addButton("Use Existing Folder", QMessageBox.ActionRole)
     create_btn = msg.addButton("Create Reports Folder", QMessageBox.AcceptRole)
-    msg.setDefaultButton(create_btn)  # Set the actual button as default
+    msg.setDefaultButton(create_btn)
     
     ret = msg.exec()
     clicked_button = msg.clickedButton()
@@ -56,10 +55,12 @@ def prompt_report_folder() -> Path:
         reports_dir.mkdir(exist_ok=True)
         folder_path = reports_dir
     else:  # Use existing folder
+        # Get initial directory from config if available
+        initial_dir = config.get_initial_folder_for_dialog() or str(script_dir)
         folder = QFileDialog.getExistingDirectory(
             None,
             "Select Reports Folder",
-            str(script_dir)
+            initial_dir
         )
         if not folder:  # User cancelled
             folder_path = script_dir / "Reports"
@@ -67,16 +68,21 @@ def prompt_report_folder() -> Path:
         else:
             folder_path = Path(folder)
     
-    # Save to config
+    # Save to config - CRITICAL: Update BOTH values
     config.set_report_folder(str(folder_path))
     config.save_config()
     
-    return folder_path
+    # Immediate verification
+    saved_path = config.get_report_folder()
+    print(f"DEBUG: Report folder saved as: {saved_path}")
+    config.verify_report_folder_sync(saved_path)
+    
+    return Path(saved_path)
 
 
 def main():
     """Main application entry point"""
-    # Set up high DPI scaling for better display on high-res screens
+    # Set up high DPI scaling
     if hasattr(Qt, 'AA_EnableHighDpiScaling'):
         QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
     if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
