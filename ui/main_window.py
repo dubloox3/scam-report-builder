@@ -4,6 +4,7 @@ Primary application interface with tab-based form.
 """
 
 import re
+import os
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Any, Tuple
@@ -651,24 +652,39 @@ class ScamReportBuilder(QMainWindow):
         # Get initial folder for file dialog using the new method
         initial_folder = config_manager.get_initial_folder_for_dialog()
         
-        # Prepare the initial path for the file dialog
-        if initial_folder and filename:
-            # Ensure initial_folder is a string
-            initial_folder_str = str(initial_folder)
-            initial_path = str(Path(initial_folder_str) / filename)
-        elif filename:
-            initial_path = filename
-        else:
-            # Fallback if no filename could be generated
-            initial_path = f"scam_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.odt"
+        # IMPORTANT: Ensure initial_folder is actually a directory, not a file
+        # If it contains a file extension, extract the directory part
+        if initial_folder:
+            initial_folder_path = Path(initial_folder)
+            # Check if it's a file (has extension or doesn't exist as directory)
+            if initial_folder_path.suffix or not initial_folder_path.is_dir():
+                # It's likely a file path, get the parent directory
+                initial_folder = str(initial_folder_path.parent)
         
-        # Use the generated filename in the file dialog
-        file_path, _ = QFileDialog.getSaveFileName(
-            self, 
-            "Save Report",
-            initial_path,
-            "ODT Files (*.odt)"
-        )
+        # IMPORTANT: Save and restore the current working directory
+        # This prevents image selection dialogs from interfering with report save location
+        current_dir = os.getcwd()
+        
+        try:
+            # Change to the desired directory before showing dialog
+            if initial_folder and Path(initial_folder).exists() and Path(initial_folder).is_dir():
+                os.chdir(str(initial_folder))
+            
+            # Prepare the initial path for the dialog
+            initial_path = str(Path(initial_folder) / filename) if initial_folder else filename
+            
+            # Use native Windows file dialog for saving reports
+            # This will show "Save" dialog (not "Open") and use Windows Explorer UI
+            file_path, _ = QFileDialog.getSaveFileName(
+                self, 
+                "Save Report",
+                initial_path,
+                "ODT Files (*.odt)"
+            )
+            
+        finally:
+            # Always restore the original directory
+            os.chdir(current_dir)
         
         if file_path:
             try:

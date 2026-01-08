@@ -3,7 +3,7 @@ from typing import List, Tuple, Optional
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
                              QFileDialog, QLabel, QScrollArea, QFrame, QMessageBox,
                              QListWidget, QListWidgetItem, QAbstractItemView, QSizePolicy)
-from PySide6.QtCore import Qt, Signal, QSize
+from PySide6.QtCore import Qt, Signal, QSize, QStandardPaths
 from PySide6.QtGui import QFont
 from .image_crop_dialog import ImageCropDialog
 
@@ -128,14 +128,32 @@ class ImageListWidget(QWidget):
         image_formats = " ".join(["*.jpg", "*.jpeg", "*.png", "*.bmp", "*.gif", "*.tiff", "*.webp"])
         file_filter = f"Images ({image_formats})"
         
+        # Get initial directory - use QStandardPaths for Pictures or Home location
+        pictures_location = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.PicturesLocation)
+        home_location = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.HomeLocation)
+        
+        # Prefer Pictures location, fall back to Home if Pictures doesn't exist
+        initial_dir = pictures_location if pictures_location and os.path.exists(pictures_location) else home_location
+        
+        # Alternative: Use ConfigManager if available and preferred
+        # try:
+        #     from core.config_manager import ConfigManager
+        #     config = ConfigManager()
+        #     initial_dir = config.get_initial_folder_for_images() or initial_dir
+        # except ImportError:
+        #     pass
+        
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Select Image",
-            "",
+            initial_dir,  # Use the determined initial directory
             file_filter
         )
         
         if file_path:
+            # DO NOT call any update_report_folder_from_dialog() method here
+            # Image selection is temporary and should not affect report save location
+            
             crop_dialog = ImageCropDialog(file_path, self)
             if crop_dialog.exec():
                 cropped_image_bytes = crop_dialog.get_cropped_image_data()

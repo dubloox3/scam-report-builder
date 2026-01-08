@@ -277,6 +277,9 @@ class ConfigManager:
         """
         Get the initial folder path for file dialogs in main_window.py.
         Returns the last_used_folder for pre-selection.
+        
+        WARNING: Only use this for REPORT FOLDER selection dialogs.
+        For image selection dialogs, use get_initial_folder_for_images() instead.
         """
         last_folder = self.get_last_used_folder()
         if last_folder and Path(last_folder).exists():
@@ -289,15 +292,50 @@ class ConfigManager:
         
         return str(Path.cwd())
     
-    def update_folder_from_dialog(self, selected_folder: str):
+    def get_initial_folder_for_images(self) -> str:
         """
-        Call this after a file dialog in main_window.py returns a folder.
+        Get the initial folder path for IMAGE SELECTION dialogs.
+        Uses user's home Pictures folder or Desktop as default.
+        Does NOT affect or use the report folder persistence.
+        """
+        # Common image locations to try
+        potential_locations = [
+            Path.home() / "Pictures",
+            Path.home() / "Desktop",
+            Path.home() / "Downloads",
+            Path.home() / "Documents",
+            Path.cwd()
+        ]
+        
+        # Return first existing location
+        for location in potential_locations:
+            if location.exists():
+                return str(location)
+        
+        # Fallback to home directory
+        return str(Path.home())
+    
+    def update_report_folder_from_dialog(self, selected_folder: str):
+        """
+        Call this ONLY after a REPORT FOLDER selection dialog.
         Updates both last_used_folder and report_folder in config.
+        
+        DO NOT use this for image selection dialogs.
         """
         if selected_folder:  # Only update if user actually selected something
             self.config["last_used_folder"] = selected_folder
             self.config["report_folder"] = selected_folder
             self.save_config()
+            print(f"✓ Report folder updated from dialog: {selected_folder}")
+    
+    def update_folder_from_dialog(self, selected_folder: str):
+        """
+        DEPRECATED: Use update_report_folder_from_dialog() instead.
+        Kept for backward compatibility but warns about misuse.
+        """
+        print("WARNING: update_folder_from_dialog() is deprecated. Use update_report_folder_from_dialog() for report folders.")
+        print("For image selection, do NOT update the config.")
+        self.update_report_folder_from_dialog(selected_folder)
     
     # ===== VERIFICATION METHODS =====
     
