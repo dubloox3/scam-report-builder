@@ -5,12 +5,14 @@ Dialog for selecting the scam type template.
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
-    QPushButton, QDialog, QTextEdit
+    QPushButton, QDialog, QTextEdit, QMessageBox
 )
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont, QPalette, QColor
 
 from core.template_manager import TemplateManager
+from core.config_manager import ConfigManager
+from ui.dialogs.template_editor_dialog import TemplateEditorDialog
 
 
 class TemplateSelectionDialog(QDialog):
@@ -56,10 +58,6 @@ class TemplateSelectionDialog(QDialog):
         
         # Template selection
         self.template_combo = QComboBox()
-        templates = TemplateManager.get_all_templates()
-        
-        for key, template in templates.items():
-            self.template_combo.addItem(template['name'], key)
         
         self.template_combo.setStyleSheet("""
             QComboBox {
@@ -112,13 +110,38 @@ class TemplateSelectionDialog(QDialog):
         """)
         layout.addWidget(self.description_text)
         
+        # Populate template combo (after description_text is created)
+        self._populate_template_combo()
+        
         # Update description when selection changes
         self.template_combo.currentIndexChanged.connect(self._update_description)
         self._update_description()  # Initial update
         
+        # Create Custom Template button
+        create_template_btn = QPushButton("Create Custom Template")
+        create_template_btn.clicked.connect(self._create_custom_template)
+        create_template_btn.setStyleSheet("""
+            QPushButton {
+                padding: 8px 20px;
+                border-radius: 4px;
+                background-color: #28a745;
+                color: white;
+                border: none;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background-color: #218838;
+            }
+            QPushButton:pressed {
+                background-color: #1e7e34;
+            }
+        """)
+        layout.addWidget(create_template_btn)
+        
         # Instructions - Updated text
         instructions = QLabel(
-            "After selecting a template, you'll be able to fill in the details and generate a scam report."
+            "After selecting a template, you'll be able to fill in the details and generate a scam report.\n"
+            "Or create a custom template tailored to your specific needs."
         )
         instructions.setWordWrap(True)
         instructions.setStyleSheet("""
@@ -203,6 +226,60 @@ class TemplateSelectionDialog(QDialog):
                         line-height: 1.4;
                     }
                 """)
+    
+    def _populate_template_combo(self):
+        """Populate the template combo box with built-in and custom templates"""
+        self.template_combo.clear()
+        templates = TemplateManager.get_all_templates()
+        
+        # Separate built-in and custom templates
+        built_in_templates = []
+        custom_templates = []
+        
+        for key, template in templates.items():
+            if key.startswith('custom-'):
+                custom_templates.append((key, template))
+            else:
+                built_in_templates.append((key, template))
+        
+        # Add built-in templates first
+        for key, template in built_in_templates:
+            self.template_combo.addItem(template['name'], key)
+        
+        # Add separator if there are custom templates
+        if custom_templates:
+            self.template_combo.insertSeparator(self.template_combo.count())
+        # Add custom templates
+        for key, template in custom_templates:
+            # Add a visual indicator for custom templates
+            self.template_combo.addItem(f"📝 {template['name']}", key)
+        
+        # Pre-select last used template (only if description_text exists)
+        config = ConfigManager()
+        last_template_key = config.get_last_template_key()
+        if last_template_key:
+            index = self.template_combo.findData(last_template_key)
+            if index >= 0:
+                self.template_combo.setCurrentIndex(index)
+                # Only update description if description_text widget exists
+                if hasattr(self, 'description_text'):
+                    self._update_description()
+    
+    def _create_custom_template(self):
+        """Open template editor dialog to create a new custom template"""
+        editor = TemplateEditorDialog(self)
+        
+        def on_template_saved(template_key):
+            # Reload templates and update combo
+            self._populate_template_combo()
+            # Select the newly created template
+            index = self.template_combo.findData(template_key)
+            if index >= 0:
+                self.template_combo.setCurrentIndex(index)
+                self._update_description()
+        
+        editor.template_saved.connect(on_template_saved)
+        editor.exec()
     
     def _select_template(self):
         """Handle template selection"""

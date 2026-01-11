@@ -8,7 +8,16 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QComboBox, QTextEdit, QGroupBox
 )
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QWheelEvent
+from PySide6.QtCore import Qt
+
+
+class NoWheelComboBox(QComboBox):
+    """QComboBox that ignores mouse wheel events to prevent accidental changes while scrolling"""
+    
+    def wheelEvent(self, event: QWheelEvent):
+        """Override to ignore wheel events"""
+        event.ignore()
 
 
 class OtherPaymentWidget(QWidget):
@@ -69,8 +78,8 @@ class OtherPaymentWidget(QWidget):
         
         payment_layout = QVBoxLayout(payment_widget)
         
-        # Payment type selection
-        type_combo = QComboBox()
+        # Payment type selection - disable mouse wheel to prevent accidental changes
+        type_combo = NoWheelComboBox()
         type_combo.addItems(self.PAYMENT_TYPES)
         type_layout = self._create_type_layout(type_combo)
         payment_layout.addLayout(type_layout)

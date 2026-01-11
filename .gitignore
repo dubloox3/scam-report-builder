@@ -6,36 +6,53 @@ __pycache__/
 .Python
 env/
 venv/
-.env
-.venv/
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
 # PyInstaller
-*.spec
-dist/
+*.spec.bak
 build/
+dist/
+# Note: Scam-Report-Builder.spec is included (build configuration)
+
+# Application data
+.report_data/
+scam_report_config.json
+Reports/
+*.odt
+*.json
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
 # OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
+desktop.ini
 
-# Project specific
-*.odt
-*.exe
-config.json
-reports/
-temp/
+# Test files
+sample_report.odt
+smoke_test_odt.py
+
+# Custom templates (user-created)
+# Note: templates/custom/ folder is created by app but templates are user data
+# Uncomment the next line if you want to exclude custom templates from git:
+# templates/custom/*.json

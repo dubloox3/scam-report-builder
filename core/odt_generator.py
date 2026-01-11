@@ -17,7 +17,8 @@ class ODTGenerator:
     
     @staticmethod
     def create_odt(content: Dict[str, Any], output_path: str, 
-                   images: Dict[str, List[Tuple[str, Optional[bytes]]]]) -> bool:
+                   images: Dict[str, List[Tuple[str, Optional[bytes]]]],
+                   template_key: Optional[str] = None) -> bool:
         """
         Generate an ODT document with embedded images.
         
@@ -29,8 +30,6 @@ class ODTGenerator:
         Returns:
             bool: True if generation was successful
         """
-        print(f"Generating ODT document: {output_path}")
-        
         # Create temporary directory for ODT components
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
@@ -47,18 +46,16 @@ class ODTGenerator:
                 # 3. Create ODT files
                 ODTGenerator._create_mimetype(temp_path)
                 ODTGenerator._create_manifest(temp_path, image_entries)
-                ODTGenerator._create_content_xml(content, image_entries, temp_path)
+                ODTGenerator._create_content_xml(content, image_entries, temp_path, template_key)
                 ODTGenerator._create_styles_xml(temp_path)
                 ODTGenerator._create_meta_xml(temp_path)
                 
                 # 4. Create final ODT (ZIP file)
                 ODTGenerator._create_odt_zip(temp_path, output_path, image_entries)
                 
-                print(f"✓ ODT generation completed")
                 return True
                 
-            except Exception as e:
-                print(f"✗ Error during ODT generation: {e}")
+            except Exception:
                 return False
     
     @staticmethod
@@ -144,7 +141,7 @@ class ODTGenerator:
     
     @staticmethod
     def _create_content_xml(content: Dict[str, Any], image_entries: List[Dict[str, Any]], 
-                           temp_path: Path):
+                           temp_path: Path, template_key: Optional[str] = None):
         """Create content.xml with report data and image references"""
         content_path = temp_path / 'content.xml'
         
@@ -215,8 +212,12 @@ class ODTGenerator:
         if scam_type == "Advance-Fee Scam (419)":
             scam_type = "Advance-Fee Scam"
         
+        # Get name for title - use filename_name for custom templates, alias for built-in
+        is_custom_template = template_key and template_key.startswith('custom-')
+        title_name = ODTGenerator._get_title_name(content, is_custom_template)
+        
         xml += f'''
-      <text:p text:style-name="P1BoldUnderline">Report for {scam_type} scammer "{ODTGenerator._get_main_alias(content)}"</text:p>
+      <text:p text:style-name="P1BoldUnderline">Report for {scam_type} scammer "{title_name}"</text:p>
       <text:p text:style-name="P1">Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</text:p>'''
         
         # Add report sections
@@ -243,6 +244,20 @@ class ODTGenerator:
             else:
                 return str(content['alias'])
         return "Unknown"
+    
+    @staticmethod
+    def _get_title_name(content: Dict[str, Any], is_custom_template: bool) -> str:
+        """Get name for report title - filename_name for custom templates, alias for built-in"""
+        if is_custom_template:
+            # For custom templates, use filename_name field
+            filename_name = content.get('filename_name', '')
+            if filename_name:
+                return filename_name
+            # Fallback to alias if filename_name not available
+            return ODTGenerator._get_main_alias(content)
+        else:
+            # For built-in templates, use alias
+            return ODTGenerator._get_main_alias(content)
     
     @staticmethod
     def _add_report_sections(xml: str, content: Dict[str, Any]) -> str:
@@ -298,6 +313,16 @@ class ODTGenerator:
             xml += f'''
       <text:p text:style-name="P1"><text:span text:style-name="T1Underline">Website(s):</text:span> {display_websites}</text:p>'''
         
+        # Social Media
+        if content.get('social_media'):
+            social_media = content['social_media']
+            if isinstance(social_media, list):
+                display_social_media = ", ".join(social_media)
+            else:
+                display_social_media = str(social_media)
+            xml += f'''
+      <text:p text:style-name="P1"><text:span text:style-name="T1Underline">Social Media(s):</text:span> {display_social_media}</text:p>'''
+        
         # IPs
         if content.get('ips'):
             ips = content['ips']
@@ -317,6 +342,16 @@ class ODTGenerator:
                 display_locations = str(locations)
             xml += f'''
       <text:p text:style-name="P1"><text:span text:style-name="T1Underline">Geo location(s):</text:span> {display_locations}</text:p>'''
+        
+        # Other info
+        if content.get('other_info'):
+            other_info = content['other_info']
+            if isinstance(other_info, list):
+                display_other_info = ", ".join(other_info)
+            else:
+                display_other_info = str(other_info)
+            xml += f'''
+      <text:p text:style-name="P1"><text:span text:style-name="T1Underline">Other info:</text:span> {display_other_info}</text:p>'''
         
         if content.get('started'):
             xml += f'''

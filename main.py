@@ -17,19 +17,15 @@ def prompt_report_folder() -> Path:
     """Prompt user for report folder location on first run"""
     config = ConfigManager()
     
-    # Check if folder already configured and verify sync
+    # Check if folder already configured
     saved_folder = config.get_report_folder()
     if saved_folder and Path(saved_folder).exists():
-        # Verify sync between report_folder and last_used_folder
-        config.verify_report_folder_sync(saved_folder)
         return Path(saved_folder)
     
     # Determine script directory - handle EXE mode
     if getattr(sys, 'frozen', False):
-        if hasattr(sys, '_MEIPASS'):
-            script_dir = Path(sys._MEIPASS)
-        else:
-            script_dir = Path(sys.executable).parent
+        # When running as EXE, use the executable's directory (not temp folder)
+        script_dir = Path(sys.executable).parent
     else:
         script_dir = Path(__file__).parent
     
@@ -72,12 +68,7 @@ def prompt_report_folder() -> Path:
     config.set_report_folder(str(folder_path))
     config.save_config()
     
-    # Immediate verification
-    saved_path = config.get_report_folder()
-    print(f"DEBUG: Report folder saved as: {saved_path}")
-    config.verify_report_folder_sync(saved_path)
-    
-    return Path(saved_path)
+    return Path(config.get_report_folder())
 
 
 def main():

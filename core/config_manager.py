@@ -7,23 +7,34 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import Dict, Any, Optional, Tuple
-from tkinter import filedialog, messagebox
-import tkinter as tk
+from typing import Dict, Any, Optional
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 
 class ConfigManager:
     """Manages application configuration"""
     
     CONFIG_FILE = "scam_report_config.json"
+    JSON_DATA_FOLDER = ".report_data"  # Folder name for JSON data files
     
     def __init__(self):
         """Initialize the ConfigManager with loaded configuration"""
         self.config = self.load_config()
     
+    def _get_app_root(self) -> Path:
+        """Get application root directory (works for both script and EXE)"""
+        import sys
+        if getattr(sys, 'frozen', False):
+            # Running as EXE - use executable's directory
+            return Path(sys.executable).parent
+        else:
+            # Running as script - use script directory
+            return Path(__file__).parent.parent
+    
     def load_config(self) -> Dict[str, Any]:
         """Load configuration from file - loads immediately from disk"""
-        config_path = Path(self.CONFIG_FILE)
+        app_root = self._get_app_root()
+        config_path = app_root / self.CONFIG_FILE
         
         if config_path.exists():
             try:
@@ -40,9 +51,11 @@ class ConfigManager:
                         config["report_folder"] = ""
                     if "last_used_folder" not in config:
                         config["last_used_folder"] = ""
+                    if "last_template_key" not in config:
+                        config["last_template_key"] = ""
                     return config
-            except Exception as e:
-                print(f"Error loading config: {e}")
+            except Exception:
+                pass  # Return default config on error
         
         # Default configuration
         return {
@@ -50,7 +63,8 @@ class ConfigManager:
             "numbering_format": "{number}",
             "output_directory": "",
             "report_folder": "",
-            "last_used_folder": ""
+            "last_used_folder": "",
+            "last_template_key": ""
         }
     
     def save_config(self, config: Optional[Dict[str, Any]] = None):
@@ -61,19 +75,44 @@ class ConfigManager:
                 self.config = config
             
             # Write to disk immediately
-            with open(self.CONFIG_FILE, 'w') as f:
+            app_root = self._get_app_root()
+            config_path = app_root / self.CONFIG_FILE
+            with open(config_path, 'w') as f:
                 json.dump(self.config, f, indent=2)
             
             # Force flush to ensure data is written
             f.flush()
             os.fsync(f.fileno())
             
-        except Exception as e:
-            print(f"Error saving config: {e}")
+        except Exception:
+            pass  # Silent failure - config save errors are non-critical
     
     def reload_config(self):
         """Force reload config from disk"""
-        self.config = self.load_config()
+        # Reload using the same path logic
+        app_root = self._get_app_root()
+        config_path = app_root / self.CONFIG_FILE
+        
+        if config_path.exists():
+            try:
+                with open(config_path, 'r') as f:
+                    config = json.load(f)
+                    # Ensure all required fields exist
+                    if "output_directory" not in config:
+                        config["output_directory"] = ""
+                    if "last_report_number" not in config:
+                        config["last_report_number"] = 0
+                    if "numbering_format" not in config:
+                        config["numbering_format"] = "{number}"
+                    if "report_folder" not in config:
+                        config["report_folder"] = ""
+                    if "last_used_folder" not in config:
+                        config["last_used_folder"] = ""
+                    if "last_template_key" not in config:
+                        config["last_template_key"] = ""
+                    self.config = config
+            except Exception:
+                pass  # Keep existing config on reload error
     
     # ===== REPORT FOLDER METHODS (IMMEDIATE SYNC) =====
     
@@ -117,14 +156,11 @@ class ConfigManager:
             # Verify the value matches
             saved_value = self.config.get("report_folder", "")
             if saved_value == folder_str:
-                print(f"✓ Report folder saved and synced: {folder_str}")
                 return True
             else:
-                print(f"✗ Report folder sync issue. Expected: {folder_str}, Got: {saved_value}")
                 return False
                 
         except Exception as e:
-            print(f"Error saving report folder: {e}")
             return False
     
     def get_last_used_folder(self) -> str:
@@ -150,8 +186,7 @@ class ConfigManager:
             self.config["last_used_folder"] = folder_str
             self.save_config()
             return True
-        except Exception as e:
-            print(f"Error saving last used folder: {e}")
+        except Exception:
             return False
     
     def save_last_used_folder(self, folder_path: str) -> bool:
@@ -196,49 +231,49 @@ class ConfigManager:
         Saves the selection to config for future use.
         Uses last_used_folder as starting point for pre-selection.
         """
-        # Get the last used folder for pre-selection
         initial_dir = self.get_last_used_folder()
         if not initial_dir or not Path(initial_dir).exists():
-            # If no last_used_folder, try report_folder
             initial_dir = self.get_report_folder()
             if not initial_dir or not Path(initial_dir).exists():
                 initial_dir = Path.cwd()
         
-        # Prompt user to choose folder
-        root = tk.Tk()
-        root.withdraw()  # Hide the main window
-        
-        response = messagebox.askyesno(
+        response = QMessageBox.question(
+            None,
             "Reports Folder",
             "Select folder for saving reports:\n\n"
             "• Click 'Yes' to choose a custom folder\n"
-            "• Click 'No' to use the default 'Reports' folder"
+            "• Click 'No' to use the default 'Reports' folder",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.Yes
         )
         
-        if response:  # User clicked Yes - choose custom folder
-            chosen_dir = filedialog.askdirectory(
-                title="Select Reports Folder",
-                initialdir=str(initial_dir)  # Pre-select last used folder
+        if response == QMessageBox.Yes:
+            chosen_dir = QFileDialog.getExistingDirectory(
+                None,
+                "Select Reports Folder",
+                str(initial_dir)
             )
             
             if chosen_dir:
-                output_dir = chosen_dir
-                messagebox.showinfo(
+                output_dir = Path(chosen_dir)
+                QMessageBox.information(
+                    None,
                     "Folder Selected",
                     f"Reports will be saved to:\n{output_dir}"
                 )
             else:
-                # User cancelled, create default folder
                 output_dir = Path.cwd() / "Reports"
                 output_dir.mkdir(exist_ok=True)
-                messagebox.showinfo(
+                QMessageBox.information(
+                    None,
                     "Reports Folder Created",
                     f"Created default 'Reports' folder at:\n{output_dir}"
                 )
-        else:  # User clicked No - create/use default folder
+        else:
             output_dir = Path.cwd() / "Reports"
             output_dir.mkdir(exist_ok=True)
-            messagebox.showinfo(
+            QMessageBox.information(
+                None,
                 "Reports Folder",
                 f"Using default 'Reports' folder at:\n{output_dir}"
             )
@@ -326,45 +361,18 @@ class ConfigManager:
             self.config["last_used_folder"] = selected_folder
             self.config["report_folder"] = selected_folder
             self.save_config()
-            print(f"✓ Report folder updated from dialog: {selected_folder}")
     
     def update_folder_from_dialog(self, selected_folder: str):
         """
         DEPRECATED: Use update_report_folder_from_dialog() instead.
-        Kept for backward compatibility but warns about misuse.
+        Kept for backward compatibility.
         """
-        print("WARNING: update_folder_from_dialog() is deprecated. Use update_report_folder_from_dialog() for report folders.")
-        print("For image selection, do NOT update the config.")
-        self.update_report_folder_from_dialog(selected_folder)
-    
-    # ===== VERIFICATION METHODS =====
-    
-    def verify_report_folder_sync(self, expected_path: str) -> bool:
-        """
-        Verify that the report folder is properly saved and synchronized.
-        Useful for debugging in main.py setup.
-        """
-        # Check in-memory config
-        in_memory_value = self.config.get("report_folder", "")
-        
-        # Reload from disk to verify persistence
-        disk_config = self.load_config()
-        disk_value = disk_config.get("report_folder", "")
-        
-        expected_normalized = str(Path(expected_path).resolve())
-        
-        match_in_memory = (in_memory_value == expected_normalized)
-        match_on_disk = (disk_value == expected_normalized)
-        
-        if match_in_memory and match_on_disk:
-            print(f"✓ Report folder synchronized correctly: {expected_normalized}")
-            return True
-        else:
-            print(f"✗ Report folder sync issue:")
-            print(f"  Expected: {expected_normalized}")
-            print(f"  In memory: {in_memory_value}")
-            print(f"  On disk: {disk_value}")
-            return False
+        try:
+            path = Path(selected_folder)
+            folder_path = path.parent if path.suffix else path
+            self.update_report_folder_from_dialog(str(folder_path))
+        except Exception:
+            self.update_report_folder_from_dialog(selected_folder)
     
     # ===== REPORT NUMBER METHODS =====
     
@@ -377,6 +385,15 @@ class ConfigManager:
         self.config["last_report_number"] = number
         self.config["numbering_format"] = format_str
         self.save_config()
+    
+    def set_last_template_key(self, template_key: str):
+        """Save the last used template key"""
+        self.config["last_template_key"] = template_key
+        self.save_config()
+    
+    def get_last_template_key(self) -> str:
+        """Get the last used template key"""
+        return self.config.get("last_template_key", "")
     
     def update_output_directory(self, new_directory: str):
         """Update output directory in config (for backward compatibility)"""
@@ -493,3 +510,43 @@ class ConfigManager:
         filename = f"{report_number}_Scammer_report_{name_string}.{file_extension}"
         
         return filename
+    
+    # ===== JSON DATA FOLDER METHODS =====
+    
+    def get_json_data_folder(self) -> Path:
+        """
+        Get or create the JSON data folder for storing report modification data.
+        Returns the path to .report_data folder in the application root directory.
+        """
+        # Determine application root directory (where main.py or executable is)
+        import sys
+        if getattr(sys, 'frozen', False):
+            # Running as compiled executable
+            if hasattr(sys, '_MEIPASS'):
+                # PyInstaller bundle - use executable directory, not temp bundle
+                app_root = Path(sys.executable).parent
+            else:
+                app_root = Path(sys.executable).parent
+        else:
+            # Running as script - use script directory
+            app_root = Path(__file__).parent.parent  # Go up from core/ to project root
+        
+        json_folder = app_root / self.JSON_DATA_FOLDER
+        json_folder.mkdir(exist_ok=True)
+        return json_folder
+    
+    def get_json_path_for_odt(self, odt_path: str) -> str:
+        """
+        Get the JSON file path for a given ODT file path.
+        The JSON file will be stored in the JSON data folder with the same base filename.
+        
+        Args:
+            odt_path: Path to the ODT file
+            
+        Returns:
+            Path to the corresponding JSON file in the JSON data folder
+        """
+        odt_path_obj = Path(odt_path)
+        json_folder = self.get_json_data_folder()
+        json_filename = odt_path_obj.stem + '.json'  # Same name but .json extension
+        return str(json_folder / json_filename)

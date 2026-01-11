@@ -14,6 +14,9 @@ class ImageListWidget(QWidget):
     images_changed = Signal()
     image_added = Signal(str, bytes)
     
+    # Class variable to remember last folder used for image selection
+    _last_image_folder = None
+    
     def __init__(self, label: str, button_text: str = "+ Add", parent=None):
         super().__init__(parent)
         self.label = label
@@ -29,7 +32,8 @@ class ImageListWidget(QWidget):
         # Header
         header = QHBoxLayout()
         header_label = QLabel(label)
-        header_label.setStyleSheet("font-weight: bold; color: #333;")
+        # Use white text to match other readable labels like "Scammers real name"
+        header_label.setStyleSheet("font-weight: bold; color: white;")
         header.addWidget(header_label)
         header.addStretch()
         
@@ -128,20 +132,14 @@ class ImageListWidget(QWidget):
         image_formats = " ".join(["*.jpg", "*.jpeg", "*.png", "*.bmp", "*.gif", "*.tiff", "*.webp"])
         file_filter = f"Images ({image_formats})"
         
-        # Get initial directory - use QStandardPaths for Pictures or Home location
-        pictures_location = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.PicturesLocation)
-        home_location = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.HomeLocation)
-        
-        # Prefer Pictures location, fall back to Home if Pictures doesn't exist
-        initial_dir = pictures_location if pictures_location and os.path.exists(pictures_location) else home_location
-        
-        # Alternative: Use ConfigManager if available and preferred
-        # try:
-        #     from core.config_manager import ConfigManager
-        #     config = ConfigManager()
-        #     initial_dir = config.get_initial_folder_for_images() or initial_dir
-        # except ImportError:
-        #     pass
+        # Get initial directory - prefer last used folder, then use QStandardPaths
+        if ImageListWidget._last_image_folder and os.path.exists(ImageListWidget._last_image_folder):
+            initial_dir = ImageListWidget._last_image_folder
+        else:
+            pictures_location = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.PicturesLocation)
+            home_location = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.HomeLocation)
+            # Prefer Pictures location, fall back to Home if Pictures doesn't exist
+            initial_dir = pictures_location if pictures_location and os.path.exists(pictures_location) else home_location
         
         file_path, _ = QFileDialog.getOpenFileName(
             self,
@@ -151,6 +149,9 @@ class ImageListWidget(QWidget):
         )
         
         if file_path:
+            # Remember the folder for next time
+            ImageListWidget._last_image_folder = os.path.dirname(file_path)
+            
             # DO NOT call any update_report_folder_from_dialog() method here
             # Image selection is temporary and should not affect report save location
             
